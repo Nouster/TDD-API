@@ -3,6 +3,7 @@ package fr.univlr.info.AppointmentAPIV1.controller;
 
 import fr.univlr.info.AppointmentAPIV1.model.Appointment;
 import fr.univlr.info.AppointmentAPIV1.model.Doctor;
+import fr.univlr.info.AppointmentAPIV1.store.AppointmentRepository;
 import fr.univlr.info.AppointmentAPIV1.store.DoctorRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -17,9 +18,11 @@ import java.util.List;
 @RequestMapping(path = "/api")
 public class DoctorController {
     private final DoctorRepository doctorRepository;
+    private final AppointmentRepository appointmentRepository;
 
-    public DoctorController(DoctorRepository doctorRepository) {
+    public DoctorController(DoctorRepository doctorRepository, AppointmentRepository appointmentRepository) {
         this.doctorRepository = doctorRepository;
+        this.appointmentRepository = appointmentRepository;
     }
 
     @GetMapping("/doctors")
@@ -37,6 +40,20 @@ public class DoctorController {
             e.printStackTrace();
         }
         return new ResponseEntity<>(doctor, HttpStatus.OK);
+    }
+
+    @GetMapping("/doctors/{name}/appointments")
+    public ResponseEntity<List<Appointment>> getAppointmentsForDoctor(@PathVariable String name) {
+        // Recherche du docteur par son nom
+        Doctor doctor = doctorRepository.findByName(name);
+        if (doctor == null) {
+            throw new DoctorNotFoundException(name);
+        }
+
+        // Recherche des rendez-vous associés au docteur
+        List<Appointment> appointments = appointmentRepository.findByDoctor(name);
+
+        return ResponseEntity.ok(appointments);
     }
 
 

@@ -3,10 +3,7 @@ package fr.univlr.info.AppointmentAPIV1.model;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import fr.univlr.info.AppointmentAPIV1.controller.AppointmentDateConstraint;
 
-import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.Id;
-import javax.persistence.ManyToOne;
+import javax.persistence.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Objects;
@@ -22,6 +19,7 @@ public class Appointment {
     private String patient;
     @JsonIgnore
     @ManyToOne
+    @JoinColumn(name = "doctor_id") // Cette annotation crée une clé étrangère dans la table Appointment vers Doctor
     private Doctor doctorInfo;
 
     public Appointment() {

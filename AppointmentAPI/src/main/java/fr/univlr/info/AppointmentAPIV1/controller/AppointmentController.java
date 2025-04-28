@@ -56,13 +56,14 @@ public class AppointmentController {
         Appointment savedAppointment = apptRepository.save(appt);
 
         // Si le rendez-vous a un docteur associé, on l'ajoute à la liste de ses rendez-vous
-        /*if (appt.getDoctor() != null) {
+
+        if (appt.getDoctor() != null) {
             Doctor doctor = doctorRepository.findByName(appt.getDoctor());
             if (doctor != null) {
                 doctor.getAppointments().add(savedAppointment);
                 doctorRepository.save(doctor);
             }
-        }*/
+        }
 
         // À partir d'ici et après la sauvegarde en BDD, je crée l'URL
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()

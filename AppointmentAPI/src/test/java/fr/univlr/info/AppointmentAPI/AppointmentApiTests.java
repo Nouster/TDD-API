@@ -310,7 +310,6 @@ public class AppointmentApiTests {
                 "/api/doctors/mjones/appointments", Appointment[].class);
         assertSame(response.getStatusCode(),HttpStatus.OK);
         Appointment[] apptArray = response.getBody();
-        System.out.println("Mon tableau :"+ apptArray.length);
         if (apptArray != null) {
             assertEquals(apptArray.length, 2);
         } else {
