@@ -32,15 +32,16 @@ public class DoctorController {
     }
 
     @GetMapping("/doctors/{name}")
-    ResponseEntity<Doctor> findDoctor(@PathVariable String name) {
-        Doctor doctor = new Doctor();
-        try{
-             doctor = doctorRepository.findByName(name);
-        } catch (DoctorNotFoundException e) {
-            e.printStackTrace();
+    public ResponseEntity<Doctor> findDoctor(@PathVariable String name) {
+        Doctor doctor = doctorRepository.findByName(name);
+
+        if (doctor == null) {
+            throw new DoctorNotFoundException(name);
         }
-        return new ResponseEntity<>(doctor, HttpStatus.OK);
+
+        return ResponseEntity.ok(doctor);
     }
+
 
     @GetMapping("/doctors/{name}/appointments")
     public ResponseEntity<List<Appointment>> getAppointmentsForDoctor(@PathVariable String name) {
@@ -66,7 +67,32 @@ public class DoctorController {
                 .buildAndExpand(savedDoctor.getId())
                 .toUri();
 
-        return new ResponseEntity<>(savedDoctor, HttpStatus.CREATED);
+        return ResponseEntity.created(location).body(savedDoctor);
+    }
+
+    // Dans la méthode ci-dessous, je vais d'abord évacuer les scénarios d'erreurs
+    @DeleteMapping("/doctors/{name}")
+    public ResponseEntity<Void> delete(@PathVariable String name) {
+        // Rechercher le médecin par son nom
+        Doctor doctor = doctorRepository.findByName(name);
+
+        // Si le médecin n'existe pas on s'arrête
+        if (doctor == null) {
+            throw new DoctorNotFoundException(name);
+        }
+
+        // Vérifier si le médecin a des rendez-vous associés
+        List<Appointment> appointments = appointmentRepository.findByDoctor(name);
+
+        // Ci-dessous, si la condition me renvoie true et donc que le tableau n'est pas vide, ça veut dire que le médecin a des rendez-vous qui lui sont associés
+        if (!appointments.isEmpty()) {
+            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+        }
+
+        // Si aucun rendez-vous, on peut supprimer le médecin
+        doctorRepository.delete(doctor);
+        return ResponseEntity.noContent().build(); // Retourne 204 No Content après suppression réussie car je n'ai rien à retourner
+
     }
 
 }

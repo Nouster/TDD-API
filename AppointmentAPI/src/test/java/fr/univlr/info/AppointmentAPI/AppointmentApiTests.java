@@ -316,31 +316,6 @@ public class AppointmentApiTests {
             Assertions.fail("Appointments not found.");
         }
     }
-}
-
-    /*
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // Question 3 : updated API **********************************************
-    // Uncomment instantiation of doctors in LoadDatabase class.
-    // We start with no appointments (see test 11)
-
-
-
-
-
-
 
     @Test
     @Order(15)
@@ -386,6 +361,30 @@ public class AppointmentApiTests {
             assertSame(e.getStatusCode(),HttpStatus.NOT_FOUND);
         }
     }
+}
+
+    /*
+
+
+
+
+
+
+
+
+
+
+
+
+
+    // Question 3 : updated API **********************************************
+    // Uncomment instantiation of doctors in LoadDatabase class.
+    // We start with no appointments (see test 11)
+
+
+
+
+
 
     // Question 4 : templated request ****************************************
 

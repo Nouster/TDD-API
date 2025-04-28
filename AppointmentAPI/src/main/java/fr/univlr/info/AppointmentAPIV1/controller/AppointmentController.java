@@ -46,10 +46,21 @@ public class AppointmentController {
 
     @PostMapping("/appointments")
     public ResponseEntity<Appointment> newAppointment(@Valid @RequestBody Appointment appt) {
+        Doctor doctor = doctorRepository.findByName(appt.getDoctor());
+
         // Validation de la date de début et de fin
         if (appt.getStartDate().before(new Date()) || appt.getEndDate().before(new Date())) {
             // Si la date de début ou de fin est dans le passé, je retourne une erreur 400 (Bad Request)
             return ResponseEntity.badRequest().body(null);
+        }
+
+        // Vérifier les conflits avec les rendez-vous existants du médecin
+        List<Appointment> existingAppointments = apptRepository.findByDoctor(doctor.getName());
+        for (Appointment existingAppointment : existingAppointments) {
+            // Vérification si les plages horaires se chevauchent
+            if (isTimeOverlap(appt, existingAppointment)) {
+                return ResponseEntity.status(HttpStatus.CONFLICT).build(); // Retourner un 409 en cas de conflit
+            }
         }
 
         // J'appelle le repository pour me permettre de communiquer avec la BDD et persister ma ressource
@@ -58,12 +69,10 @@ public class AppointmentController {
         // Si le rendez-vous a un docteur associé, on l'ajoute à la liste de ses rendez-vous
 
         if (appt.getDoctor() != null) {
-            Doctor doctor = doctorRepository.findByName(appt.getDoctor());
-            if (doctor != null) {
                 doctor.getAppointments().add(savedAppointment);
                 doctorRepository.save(doctor);
             }
-        }
+
 
         // À partir d'ici et après la sauvegarde en BDD, je crée l'URL
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
@@ -73,6 +82,12 @@ public class AppointmentController {
 
         // Enfin, dernière étape. Je retourne une réponse avec le code 201 (Created) et l'URL de la ressource en question
         return ResponseEntity.created(location).body(savedAppointment);
+    }
+
+
+    // Méthode pour vérifier si les créneaux horaires se chevauchent
+    private boolean isTimeOverlap(Appointment appt1, Appointment appt2) {
+        return !(appt1.getEndDate().toInstant().isBefore(appt2.getStartDate().toInstant()) || appt1.getStartDate().toInstant().isAfter(appt2.getEndDate().toInstant()));
     }
 
     /**
