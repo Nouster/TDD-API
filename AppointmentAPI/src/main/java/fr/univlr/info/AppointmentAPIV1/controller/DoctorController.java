@@ -17,6 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping(path = "/api")
 public class DoctorController {
+    // Ces interfaces qui étendent JpaRepository me permettent de communiquer avec la BDD
     private final DoctorRepository doctorRepository;
     private final AppointmentRepository appointmentRepository;
 
@@ -35,6 +36,7 @@ public class DoctorController {
     public ResponseEntity<Doctor> findDoctor(@PathVariable String name) {
         Doctor doctor = doctorRepository.findByName(name);
 
+        // L'exception sera gérée au niveau de la classe GlobalExceptionHandler
         if (doctor == null) {
             throw new DoctorNotFoundException(name);
         }
@@ -45,13 +47,12 @@ public class DoctorController {
 
     @GetMapping("/doctors/{name}/appointments")
     public ResponseEntity<List<Appointment>> getAppointmentsForDoctor(@PathVariable String name) {
-        // Recherche du docteur par son nom
         Doctor doctor = doctorRepository.findByName(name);
         if (doctor == null) {
             throw new DoctorNotFoundException(name);
         }
 
-        // Recherche des rendez-vous associés au docteur
+        // Pour Rechercher les rendez-vous associés au docteur
         List<Appointment> appointments = appointmentRepository.findByDoctor(name);
 
         return ResponseEntity.ok(appointments);
@@ -76,7 +77,7 @@ public class DoctorController {
         // Rechercher le médecin par son nom
         Doctor doctor = doctorRepository.findByName(name);
 
-        // Si le médecin n'existe pas on s'arrête
+        // Si le médecin n'existe pas on s'arrête et l'exception sera gérée par le GlobalExceptionHandler
         if (doctor == null) {
             throw new DoctorNotFoundException(name);
         }
@@ -94,5 +95,4 @@ public class DoctorController {
         return ResponseEntity.noContent().build(); // Retourne 204 No Content après suppression réussie car je n'ai rien à retourner
 
     }
-
 }

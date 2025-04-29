@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 /**
  * Classe de gestion globale des exceptions.
  *
- * Cette classe intercepte toutes les exceptions levées par les contrôleurs,
+ * Cette classe me permet d'intercepter toutes les exceptions levées par les contrôleurs,
  * et renvoie des réponses HTTP appropriées au client, avec des statuts
  * et des messages personnalisés.
  *

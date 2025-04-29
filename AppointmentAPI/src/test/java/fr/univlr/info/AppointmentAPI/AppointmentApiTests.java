@@ -361,6 +361,28 @@ public class AppointmentApiTests {
             assertSame(e.getStatusCode(),HttpStatus.NOT_FOUND);
         }
     }
+
+    @Test
+    @Order(18)
+    public void testGetAllAppointmentsAfterADate() {
+        String date = currentYear + "-09-26T10:00";
+        ResponseEntity<Appointment[]> response =
+                restTemplate.getForEntity("http://localhost:" + port +
+                        "/api/appointments?date=" + date, Appointment[].class);
+        assertSame(response.getStatusCode(),HttpStatus.OK);
+        Appointment[] apptArray = response.getBody();
+        System.out.println(apptArray);
+        if (apptArray != null) {
+            assertEquals(apptArray.length, 1);
+            Appointment appt = apptArray[0];
+            assertEquals(appt.getDoctor(), "mjones");
+            assertEquals(appt.getStartDate(), parseDate(currentYear + "-10-25T16:00"));
+            assertEquals(appt.getEndDate(), parseDate(currentYear + "-10-25T16:30"));
+            assertEquals(appt.getPatient(), "patient6");
+        } else {
+            Assertions.fail("Appointments not found.");
+        }
+    }
 }
 
     /*
@@ -388,26 +410,7 @@ public class AppointmentApiTests {
 
     // Question 4 : templated request ****************************************
 
-    @Test
-    @Order(18)
-    public void testGetAllAppointmentsAfterADate() {
-        String date = currentYear + "-09-26T10:00";
-        ResponseEntity<Appointment[]> response =
-                restTemplate.getForEntity("http://localhost:" + port +
-                        "/api/appointments?date=" + date, Appointment[].class);
-        assertSame(response.getStatusCode(),HttpStatus.OK);
-        Appointment[] apptArray = response.getBody();
-        if (apptArray != null) {
-            assertEquals(apptArray.length, 1);
-            Appointment appt = apptArray[0];
-            assertEquals(appt.getDoctor(), "mjones");
-            assertEquals(appt.getStartDate(), parseDate(currentYear + "-10-25T16:00"));
-            assertEquals(appt.getEndDate(), parseDate(currentYear + "-10-25T16:30"));
-            assertEquals(appt.getPatient(), "patient6");
-        } else {
-            Assertions.fail("Appointments not found.");
-        }
-    }
+
 
     @Test
     @Order(19)

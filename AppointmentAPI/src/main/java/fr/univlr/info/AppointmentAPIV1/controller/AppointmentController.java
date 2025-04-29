@@ -5,6 +5,7 @@ import fr.univlr.info.AppointmentAPIV1.model.Doctor;
 import fr.univlr.info.AppointmentAPIV1.store.AppointmentRepository;
 import fr.univlr.info.AppointmentAPIV1.store.DoctorRepository;
 import org.springframework.beans.BeanUtils;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -17,7 +18,6 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping(path = "/api")
@@ -33,8 +33,18 @@ public class AppointmentController {
 
 
     @GetMapping("/appointments")
-    ResponseEntity<Collection<Appointment>> all() {
-        List<Appointment> appts = apptRepository.findAll();
+    ResponseEntity<Collection<Appointment>> all(@RequestParam(value = "date", required = false)
+                                                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date date) {
+        List<Appointment> appts;
+
+        // Si ma requête contient un parametre d'URL date, alors j'appelle la méthode définit dans mon interface.
+        // c’est une méthode de requête dérivée JPA. Il n'est pas nécessaire que je l'implémente
+        if (date != null) {
+            appts = apptRepository.findByStartDateAfter(date);
+        } else {
+            appts = apptRepository.findAll();
+        }
+
         return new ResponseEntity<>(appts, HttpStatus.OK);
     }
 
@@ -49,17 +59,23 @@ public class AppointmentController {
         Doctor doctor = doctorRepository.findByName(appt.getDoctor());
 
         // Validation de la date de début et de fin
+        // Je vérifie que les dates de début et de fin du rendez-vous sont valides.
+        // Si l'une des deux est dans le passé (avant la date et l'heure actuelles), cela signifie
+        // que l'utilisateur essaie de créer un rendez-vous rétroactif, ce qui est interdit.
+        // Dans ce cas, je retourne une réponse HTTP 400 (Bad Request), avec un corps vide,
+        // pour indiquer clairement que la requête envoyée est incorrecte.
+
         if (appt.getStartDate().before(new Date()) || appt.getEndDate().before(new Date())) {
             // Si la date de début ou de fin est dans le passé, je retourne une erreur 400 (Bad Request)
             return ResponseEntity.badRequest().body(null);
         }
 
-        // Vérifier les conflits avec les rendez-vous existants du médecin
+        // Ici je vérifie les conflits avec les rendez-vous existants du médecin
         List<Appointment> existingAppointments = apptRepository.findByDoctor(doctor.getName());
         for (Appointment existingAppointment : existingAppointments) {
             // Vérification si les plages horaires se chevauchent
             if (isTimeOverlap(appt, existingAppointment)) {
-                return ResponseEntity.status(HttpStatus.CONFLICT).build(); // Retourner un 409 en cas de conflit
+                return ResponseEntity.status(HttpStatus.CONFLICT).build();
             }
         }
 
@@ -67,7 +83,6 @@ public class AppointmentController {
         Appointment savedAppointment = apptRepository.save(appt);
 
         // Si le rendez-vous a un docteur associé, on l'ajoute à la liste de ses rendez-vous
-
         if (appt.getDoctor() != null) {
                 doctor.getAppointments().add(savedAppointment);
                 doctorRepository.save(doctor);
@@ -85,7 +100,7 @@ public class AppointmentController {
     }
 
 
-    // Méthode pour vérifier si les créneaux horaires se chevauchent
+    // Méthode pour vérifier si les créneaux horaires se chevauchent. Par exemple, si la date de fin est avant la date de début je retourne false
     private boolean isTimeOverlap(Appointment appt1, Appointment appt2) {
         return !(appt1.getEndDate().toInstant().isBefore(appt2.getStartDate().toInstant()) || appt1.getStartDate().toInstant().isAfter(appt2.getEndDate().toInstant()));
     }

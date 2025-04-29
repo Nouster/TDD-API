@@ -3,6 +3,7 @@ package fr.univlr.info.AppointmentAPIV1.model;
 
 import javax.persistence.*;
 import java.util.List;
+import java.util.Objects;
 
 @Entity
 public class Doctor {
@@ -50,5 +51,17 @@ public class Doctor {
                 ", name='" + name + '\'' +
                 ", appointments=" + appointments +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (!(o instanceof Doctor)) return false;
+        Doctor doctor = (Doctor) o;
+        return Objects.equals(id, doctor.id) && Objects.equals(name, doctor.name) && Objects.equals(appointments, doctor.appointments);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(id, name, appointments);
     }
 }
