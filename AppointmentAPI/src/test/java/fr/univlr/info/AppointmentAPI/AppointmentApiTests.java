@@ -9,12 +9,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.MediaTypes;
+import org.springframework.hateoas.client.Traverson;
 import org.springframework.hateoas.server.core.TypeReferences;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
+import java.net.URI;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.DateTimeException;
@@ -446,6 +449,61 @@ public class AppointmentApiTests {
         }
     }
 
+    @Test
+    @Order(22)
+    public void testGetOneAppointmentHAL() {
+        Traverson client = new Traverson(URI.create("http://localhost:" + port +
+                "/api/appointments/" + createdAppt.getId()), MediaTypes.HAL_JSON);
+        EntityModel<Appointment> apptEntity = client //
+                .follow("self") //
+                .toObject(new TypeReferences.EntityModelType<Appointment>() {
+                });
+        if (apptEntity != null) {
+            Appointment appt = apptEntity.getContent();
+            if (appt != null) {
+                assertEquals(appt.getPatient(), createdAppt.getPatient());
+            } else {
+                Assertions.fail("Appointment not found.");
+            }
+        } else {
+            Assertions.fail("HAL appointment not found.");
+        }
+    }
+
+    @Test
+    @Order(23)
+    public void testGetAllDoctorsHALWithRestTemplate() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Accept", "application/hal+json"); // get HAL/JSON
+        HttpEntity<String> request = new HttpEntity<>("", headers);
+        ResponseEntity<CollectionModel<EntityModel<Doctor>>> response =
+                this.restTemplate.exchange(
+                        "http://localhost:" + port + "/api/doctors",
+                        HttpMethod.GET, request, new TypeReferences.CollectionModelType<EntityModel<Doctor>>() {
+                        });
+        assertSame(response.getStatusCode(),HttpStatus.OK);
+        CollectionModel<EntityModel<Doctor>> cmEMDoctors = response.getBody();
+        if (cmEMDoctors != null) {
+            Collection<EntityModel<Doctor>> cEMDoctors = cmEMDoctors.getContent();
+            assertEquals(cEMDoctors.size(), 2);
+            List<String> docNames = new ArrayList<>();
+            for (EntityModel<Doctor> doctorEntity : cEMDoctors) {
+                assertTrue(doctorEntity.hasLink("self"));
+                assertTrue(doctorEntity.hasLink("doctors"));
+                Doctor doc = doctorEntity.getContent();
+                if (doc != null) {
+                    docNames.add(doc.getName());
+                } else {
+                    Assertions.fail("Doctor not found.");
+                }
+            }
+            // no assumption on the doctor order
+            List<String> nameTest = Arrays.asList("mjones","jdoe");
+            Assertions.assertIterableEquals(docNames, nameTest);
+        } else {
+            Assertions.fail("Doctor entities not found.");
+        }
+    }
 }
 
     /*
@@ -482,26 +540,7 @@ public class AppointmentApiTests {
 
 
 
-    @Test
-    @Order(22)
-    public void testGetOneAppointmentHAL() {
-        Traverson client = new Traverson(URI.create("http://localhost:" + port +
-                "/api/appointments/" + createdAppt.getId()), MediaTypes.HAL_JSON);
-        EntityModel<Appointment> apptEntity = client //
-                .follow("self") //
-                .toObject(new TypeReferences.EntityModelType<Appointment>() {
-                });
-        if (apptEntity != null) {
-            Appointment appt = apptEntity.getContent();
-            if (appt != null) {
-                assertEquals(appt.getPatient(), createdAppt.getPatient());
-            } else {
-                Assertions.fail("Appointment not found.");
-            }
-        } else {
-            Assertions.fail("HAL appointment not found.");
-        }
-    }
+
 
     @Test
     @Order(23)
