@@ -5,6 +5,8 @@ import fr.univlr.info.AppointmentAPIV1.model.Appointment;
 import fr.univlr.info.AppointmentAPIV1.model.Doctor;
 import fr.univlr.info.AppointmentAPIV1.store.AppointmentRepository;
 import fr.univlr.info.AppointmentAPIV1.store.DoctorRepository;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +15,10 @@ import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 import java.net.URI;
 import java.util.Collection;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping(path = "/api")
@@ -20,16 +26,36 @@ public class DoctorController {
     // Ces interfaces qui étendent JpaRepository me permettent de communiquer avec la BDD
     private final DoctorRepository doctorRepository;
     private final AppointmentRepository appointmentRepository;
+    private final DoctorModelAssembler doctorModelAssembler;
 
-    public DoctorController(DoctorRepository doctorRepository, AppointmentRepository appointmentRepository) {
+
+    public DoctorController(DoctorRepository doctorRepository, AppointmentRepository appointmentRepository, DoctorModelAssembler doctorModelAssembler) {
         this.doctorRepository = doctorRepository;
         this.appointmentRepository = appointmentRepository;
+        this.doctorModelAssembler = doctorModelAssembler;
     }
 
-    @GetMapping("/doctors")
+    // Même chose que pour les appointments :
+    // Si le client fournit dans l'en-tête de sa requête `Accept: application/json`,
+    // le serveur lui répondra avec un JSON classique, sans liens hypermédia.
+    @GetMapping(value = "/doctors", produces = "application/json")
     ResponseEntity<Collection<Doctor>> all() {
         List<Doctor> doctors = doctorRepository.findAll();
         return new ResponseEntity<>(doctors, HttpStatus.OK);
+    }
+
+    // Par contre, si le client fournit `Accept: application/hal+json` dans l'en-tête de la requête,
+    // alors le serveur renverra une réponse enrichie au format HAL (Hypertext Application Language).
+    // Chaque ressource médecin (Doctor) sera alors encapsulée dans un `EntityModel` avec des liens hypermédia
+    // permettant de naviguer facilement vers des ressources liées (ex: self, liste des médecins).
+    @GetMapping(value = "/doctors", produces = "application/hal+json")
+    public CollectionModel<EntityModel<Doctor>> allHal() {
+        List<EntityModel<Doctor>> doctors = doctorRepository.findAll().stream()
+                .map(doctorModelAssembler::toModel)
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(doctors,
+                linkTo(methodOn(DoctorController.class).allHal()).withSelfRel());
     }
 
     @GetMapping("/doctors/{name}")

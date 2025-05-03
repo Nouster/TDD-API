@@ -1,12 +1,14 @@
 package fr.univlr.info.AppointmentAPIV1.model;
 
 
+import org.springframework.hateoas.EntityModel;
+
 import javax.persistence.*;
 import java.util.List;
 import java.util.Objects;
 
 @Entity
-public class Doctor {
+public class Doctor extends EntityModel<Doctor> {
     @Id
     @GeneratedValue
     private Long id;
