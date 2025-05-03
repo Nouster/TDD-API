@@ -7,6 +7,7 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
+import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.MediaTypes;
@@ -15,7 +16,6 @@ import org.springframework.hateoas.server.core.TypeReferences;
 import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpStatusCodeException;
-import org.springframework.web.client.RestTemplate;
 
 import java.net.URI;
 import java.text.ParseException;
@@ -504,6 +504,31 @@ public class AppointmentApiTests {
             Assertions.fail("Doctor entities not found.");
         }
     }
+
+    @Test
+    @Order(24)
+    public void testGetOneDoctorHALWithRestTemplate() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Accept", "application/hal+json"); // get JSON/HAL
+        HttpEntity<String> request = new HttpEntity<>("", headers);
+        ResponseEntity<EntityModel<Doctor>> response = this.restTemplate.exchange(
+                "http://localhost:" + port + "/api/doctors/mjones",
+                HttpMethod.GET, request, new ParameterizedTypeReference<EntityModel<Doctor>>() {});
+        assertSame(response.getStatusCode(),HttpStatus.OK);
+        EntityModel<Doctor> docEntity = response.getBody();
+        if (docEntity != null) {
+            assertTrue(docEntity.hasLink("self"));
+            assertTrue(docEntity.hasLink("doctors"));
+            Doctor doctor = docEntity.getContent();
+            if (doctor != null) {
+                assertEquals(doctor.getName(), "mjones");
+            } else {
+                Assertions.fail("Doctor not found.");
+            }
+        } else {
+            Assertions.fail("Doctor entity not found.");
+        }
+    }
 }
 
     /*
@@ -542,65 +567,9 @@ public class AppointmentApiTests {
 
 
 
-    @Test
-    @Order(23)
-    public void testGetAllDoctorsHALWithRestTemplate() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Accept", "application/hal+json"); // get HAL/JSON
-        HttpEntity<String> request = new HttpEntity<>("", headers);
-        ResponseEntity<CollectionModel<EntityModel<Doctor>>> response =
-                this.restTemplate.exchange(
-                        "http://localhost:" + port + "/api/doctors",
-                        HttpMethod.GET, request, new TypeReferences.CollectionModelType<EntityModel<Doctor>>() {
-                        });
-        assertSame(response.getStatusCode(),HttpStatus.OK);
-        CollectionModel<EntityModel<Doctor>> cmEMDoctors = response.getBody();
-        if (cmEMDoctors != null) {
-            Collection<EntityModel<Doctor>> cEMDoctors = cmEMDoctors.getContent();
-            assertEquals(cEMDoctors.size(), 2);
-            List<String> docNames = new ArrayList<>();
-            for (EntityModel<Doctor> doctorEntity : cEMDoctors) {
-                assertTrue(doctorEntity.hasLink("self"));
-                assertTrue(doctorEntity.hasLink("doctors"));
-                Doctor doc = doctorEntity.getContent();
-                if (doc != null) {
-                    docNames.add(doc.getName());
-                } else {
-                    Assertions.fail("Doctor not found.");
-                }
-            }
-            // no assumption on the doctor order
-            List<String> nameTest = Arrays.asList("mjones","jdoe");
-            Assertions.assertIterableEquals(docNames, nameTest);
-        } else {
-            Assertions.fail("Doctor entities not found.");
-        }
-    }
 
-    @Test
-    @Order(24)
-    public void testGetOneDoctorHALWithRestTemplate() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Accept", "application/hal+json"); // get JSON/HAL
-        HttpEntity<String> request = new HttpEntity<>("", headers);
-        ResponseEntity<EntityModel<Doctor>> response = this.restTemplate.exchange(
-                "http://localhost:" + port + "/api/doctors/mjones",
-                HttpMethod.GET, request, new ParameterizedTypeReference<EntityModel<Doctor>>() {});
-        assertSame(response.getStatusCode(),HttpStatus.OK);
-        EntityModel<Doctor> docEntity = response.getBody();
-        if (docEntity != null) {
-            assertTrue(docEntity.hasLink("self"));
-            assertTrue(docEntity.hasLink("doctors"));
-            Doctor doctor = docEntity.getContent();
-            if (doctor != null) {
-                assertEquals(doctor.getName(), "mjones");
-            } else {
-                Assertions.fail("Doctor not found.");
-            }
-        } else {
-            Assertions.fail("Doctor entity not found.");
-        }
-    }
+
+
 
     @Test
     @Order(25)

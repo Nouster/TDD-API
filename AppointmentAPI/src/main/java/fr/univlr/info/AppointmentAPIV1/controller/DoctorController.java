@@ -47,7 +47,7 @@ public class DoctorController {
     // Par contre, si le client fournit `Accept: application/hal+json` dans l'en-tête de la requête,
     // alors le serveur renverra une réponse enrichie au format HAL (Hypertext Application Language).
     // Chaque ressource médecin (Doctor) sera alors encapsulée dans un `EntityModel` avec des liens hypermédia
-    // permettant de naviguer facilement vers des ressources liées (ex: self, liste des médecins).
+    // ça permettra de naviguer facilement vers des ressources liées.
     @GetMapping(value = "/doctors", produces = "application/hal+json")
     public CollectionModel<EntityModel<Doctor>> allHal() {
         List<EntityModel<Doctor>> doctors = doctorRepository.findAll().stream()
@@ -70,10 +70,24 @@ public class DoctorController {
         return ResponseEntity.ok(doctor);
     }
 
+    @GetMapping(value = "/doctors/{name}", produces = "application/hal+json")
+    public EntityModel<Doctor> oneHal(@PathVariable String name) {
+
+        Doctor doctor = doctorRepository.findByName(name);
+
+        // L'exception sera gérée au niveau de la classe GlobalExceptionHandler
+        if (doctor == null) {
+            throw new DoctorNotFoundException(name);
+        }
+
+        return doctorModelAssembler.toModel(doctor);
+    }
 
     @GetMapping("/doctors/{name}/appointments")
     public ResponseEntity<List<Appointment>> getAppointmentsForDoctor(@PathVariable String name) {
+
         Doctor doctor = doctorRepository.findByName(name);
+
         if (doctor == null) {
             throw new DoctorNotFoundException(name);
         }
