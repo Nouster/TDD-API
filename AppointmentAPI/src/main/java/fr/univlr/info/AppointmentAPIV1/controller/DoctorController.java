@@ -83,7 +83,7 @@ public class DoctorController {
         return doctorModelAssembler.toModel(doctor);
     }
 
-    @GetMapping("/doctors/{name}/appointments")
+    @GetMapping(value = "/doctors/{name}/appointments", produces = "application/json")
     public ResponseEntity<List<Appointment>> getAppointmentsForDoctor(@PathVariable String name) {
 
         Doctor doctor = doctorRepository.findByName(name);
@@ -96,6 +96,30 @@ public class DoctorController {
         List<Appointment> appointments = appointmentRepository.findByDoctor(name);
 
         return ResponseEntity.ok(appointments);
+    }
+
+    // Si le client spécifie dans l'en-tête de sa requête qu'il souhaite que le serveur lui retourne la réponse
+    // avec des liens hypermedias
+    @GetMapping(value = "/doctors/{name}/appointments", produces = "application/hal+json")
+    public CollectionModel<EntityModel<Appointment>> getAppointmentsForDoctorHal(@PathVariable String name) {
+        Doctor doctor = doctorRepository.findByName(name);
+        if (doctor == null) {
+            throw new DoctorNotFoundException(name);
+        }
+
+        List<Appointment> appointments = appointmentRepository.findByDoctor(name);
+
+        List<EntityModel<Appointment>> appointmentResources = appointments.stream()
+                .map(appointment -> EntityModel.of(
+                        appointment,
+                        linkTo(methodOn(AppointmentController.class)
+                                .getAppointmentById(appointment.getId())).withSelfRel()))
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(
+                appointmentResources,
+                linkTo(methodOn(DoctorController.class)
+                        .getAppointmentsForDoctorHal(name)).withSelfRel());
     }
 
 

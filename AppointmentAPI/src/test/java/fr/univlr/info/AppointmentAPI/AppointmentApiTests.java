@@ -11,6 +11,7 @@ import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.MediaTypes;
+import org.springframework.hateoas.client.Hop;
 import org.springframework.hateoas.client.Traverson;
 import org.springframework.hateoas.server.core.TypeReferences;
 import org.springframework.http.*;
@@ -529,6 +530,59 @@ public class AppointmentApiTests {
             Assertions.fail("Doctor entity not found.");
         }
     }
+
+    @Test
+    @Order(25)
+    public void testGetOneDoctorHAL() {
+        Traverson client = new Traverson(URI.create("http://localhost:" + port +
+                "/api/doctors/mjones"), MediaTypes.HAL_JSON);
+        EntityModel<Doctor> doctorEntity = client //
+                .follow("self") //
+                .toObject(new TypeReferences.EntityModelType<Doctor>() {});
+        if (doctorEntity != null) {
+            Doctor doctor = doctorEntity.getContent();
+            if (doctor != null) {
+                assertEquals(doctor.getName(), "mjones");
+            } else {
+                Assertions.fail("Doctor not found.");
+            }
+        } else {
+            Assertions.fail("Doctor entity not found.");
+        }
+    }
+
+    @Test
+    @Order(26)
+    public void testGetAllDoctorsWithLinkHAL() {
+        Traverson client = new Traverson(URI.create("http://localhost:" + port +
+                "/api/doctors/mjones"), MediaTypes.HAL_JSON);
+        // get the link for all doctor resources
+        Traverson.TraversalBuilder builder = client.follow(Hop.rel("doctors"));
+        CollectionModel<EntityModel<Doctor>> cmEMDoctors =
+                builder.toObject(new TypeReferences.CollectionModelType<EntityModel<Doctor>>() {});
+        if (cmEMDoctors != null) {
+            assertEquals(cmEMDoctors.getContent().size(), 2);
+        } else {
+            Assertions.fail("Doctor entities not found.");
+        }
+    }
+
+    @Test
+    @Order(27)
+    public void testGetAppointmentForOneDoctorHAL() {
+        Traverson client = new Traverson(URI.create("http://localhost:" + port +
+                "/api/doctors/mjones"), MediaTypes.HAL_JSON);
+        // get the link for all appointment resources for doctor mjones
+        Traverson.TraversalBuilder builder = client.follow(Hop.rel("appointments"));
+        CollectionModel<EntityModel<Appointment>> apptForMJones =
+                builder.toObject(new TypeReferences.CollectionModelType<EntityModel<Appointment>>() {});
+        if (apptForMJones != null) {
+            List<EntityModel<Appointment>> apptEntities = new ArrayList<>(apptForMJones.getContent());
+            assertEquals(apptEntities.size(), 2);
+        } else {
+            Assertions.fail("Appointment entities for doctor Jones not found.");
+        }
+    }
 }
 
     /*
@@ -571,58 +625,11 @@ public class AppointmentApiTests {
 
 
 
-    @Test
-    @Order(25)
-    public void testGetOneDoctorHAL() {
-        Traverson client = new Traverson(URI.create("http://localhost:" + port +
-                "/api/doctors/mjones"), MediaTypes.HAL_JSON);
-        EntityModel<Doctor> doctorEntity = client //
-                .follow("self") //
-                .toObject(new TypeReferences.EntityModelType<Doctor>() {});
-        if (doctorEntity != null) {
-            Doctor doctor = doctorEntity.getContent();
-            if (doctor != null) {
-                assertEquals(doctor.getName(), "mjones");
-            } else {
-                Assertions.fail("Doctor not found.");
-            }
-        } else {
-            Assertions.fail("Doctor entity not found.");
-        }
-    }
 
-    @Test
-    @Order(26)
-    public void testGetAllDoctorsWithLinkHAL() {
-        Traverson client = new Traverson(URI.create("http://localhost:" + port +
-                "/api/doctors/mjones"), MediaTypes.HAL_JSON);
-        // get the link for all doctor resources
-        Traverson.TraversalBuilder builder = client.follow(rel("doctors"));
-        CollectionModel<EntityModel<Doctor>> cmEMDoctors =
-                builder.toObject(new TypeReferences.CollectionModelType<EntityModel<Doctor>>() {});
-        if (cmEMDoctors != null) {
-            assertEquals(cmEMDoctors.getContent().size(), 2);
-        } else {
-            Assertions.fail("Doctor entities not found.");
-        }
-    }
 
-    @Test
-    @Order(27)
-    public void testGetAppointmentForOneDoctorHAL() {
-        Traverson client = new Traverson(URI.create("http://localhost:" + port +
-                "/api/doctors/mjones"), MediaTypes.HAL_JSON);
-        // get the link for all appointment resources for doctor mjones
-        Traverson.TraversalBuilder builder = client.follow(rel("appointments"));
-        CollectionModel<EntityModel<Appointment>> apptForMJones =
-                builder.toObject(new TypeReferences.CollectionModelType<EntityModel<Appointment>>() {});
-        if (apptForMJones != null) {
-            List<EntityModel<Appointment>> apptEntities = new ArrayList<>(apptForMJones.getContent());
-            assertEquals(apptEntities.size(), 2);
-        } else {
-            Assertions.fail("Appointment entities for doctor Jones not found.");
-        }
-    }
+
+
+
 
     // Question 6 : action feature **********************************************
 
