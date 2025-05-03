@@ -2,6 +2,7 @@ package fr.univlr.info.AppointmentAPIV1.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import fr.univlr.info.AppointmentAPIV1.controller.AppointmentDateConstraint;
+import org.springframework.hateoas.EntityModel;
 
 import javax.persistence.*;
 import java.text.SimpleDateFormat;
@@ -10,7 +11,7 @@ import java.util.Objects;
 
 @Entity
 @AppointmentDateConstraint
-public class Appointment {
+public class Appointment extends EntityModel<Appointment> {
     @Id
     @GeneratedValue
     private Long id;

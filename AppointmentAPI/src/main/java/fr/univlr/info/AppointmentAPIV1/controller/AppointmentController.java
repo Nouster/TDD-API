@@ -6,6 +6,8 @@ import fr.univlr.info.AppointmentAPIV1.store.AppointmentRepository;
 import fr.univlr.info.AppointmentAPIV1.store.DoctorRepository;
 import org.springframework.beans.BeanUtils;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -18,6 +20,10 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.Date;
 import java.util.List;
+import java.util.stream.Collectors;
+
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.linkTo;
+import static org.springframework.hateoas.server.mvc.WebMvcLinkBuilder.methodOn;
 
 @RestController
 @RequestMapping(path = "/api")
@@ -25,14 +31,18 @@ import java.util.List;
 public class AppointmentController {
     private final AppointmentRepository apptRepository;
     private final DoctorRepository doctorRepository;
+    private final AppointmentModelAssembler appointmentModelAssembler;
 
-    public AppointmentController(AppointmentRepository apptRepository, DoctorRepository doctorRepository) {
+
+    public AppointmentController(AppointmentRepository apptRepository, DoctorRepository doctorRepository,AppointmentModelAssembler appointmentModelAssembler) {
         this.doctorRepository = doctorRepository;
         this.apptRepository = apptRepository;
+        this.appointmentModelAssembler = appointmentModelAssembler;
     }
 
 
-    @GetMapping("/appointments")
+    // Si le client spécifie dans l'en-tête de la requête Accept: application/json alors le serveur lui retournera un json classique
+    @GetMapping(value = "/appointments", produces = "application/json")
     ResponseEntity<Collection<Appointment>> all(@RequestParam(value = "date", required = false)
                                                 @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date date) {
         List<Appointment> appts;
@@ -48,10 +58,32 @@ public class AppointmentController {
         return new ResponseEntity<>(appts, HttpStatus.OK);
     }
 
+    // Si le client spécifie dans l'en-tête de la requête accept: application/hal+json alors le serveur lui retournera un json au format HAL
+    @GetMapping(value = "/appointments", produces = "application/hal+json")
+    public CollectionModel<EntityModel<Appointment>> allHal(
+            @RequestParam(value = "date", required = false)
+            @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) Date date) {
+
+        List<Appointment> appts = (date != null)
+                ? apptRepository.findByStartDateAfter(date)
+                : apptRepository.findAll();
+
+        List<EntityModel<Appointment>> appointmentResources = appts.stream()
+                .map(appointmentModelAssembler::toModel)
+                .collect(Collectors.toList());
+
+        return CollectionModel.of(
+                appointmentResources,
+                linkTo(methodOn(AppointmentController.class).allHal(null)).withSelfRel()
+        );
+    }
+
     @GetMapping("/appointments/{id}")
-    public ResponseEntity<Appointment> getAppointmentById(@PathVariable Long id) {
+    public EntityModel<Appointment> getAppointmentById(@PathVariable Long id) {
         Appointment appt = apptRepository.findById(id).orElseThrow(()-> new AppointmentNotFoundException(id));
-        return new ResponseEntity<>(appt, HttpStatus.OK);
+        return EntityModel.of(appt, //
+                linkTo(methodOn(AppointmentController.class).getAppointmentById(id)).withSelfRel(),
+                linkTo(methodOn(AppointmentController.class).all(null)).withRel("appointments"));
     }
 
     @PostMapping("/appointments")

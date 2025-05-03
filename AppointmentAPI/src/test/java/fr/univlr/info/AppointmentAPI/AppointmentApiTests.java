@@ -7,10 +7,10 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.web.server.LocalServerPort;
-import org.springframework.http.HttpEntity;
-import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.hateoas.CollectionModel;
+import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.server.core.TypeReferences;
+import org.springframework.http.*;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
@@ -18,9 +18,7 @@ import org.springframework.web.client.RestTemplate;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.DateTimeException;
-import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -383,6 +381,45 @@ public class AppointmentApiTests {
             Assertions.fail("Appointments not found.");
         }
     }
+
+    @Test
+    @Order(19)
+    public void testGetAllAppointmentsWithInvalidDate() {
+        String date = "2021-20-27T17:34";
+        try {
+            restTemplate.getForEntity("http://localhost:" + port +
+                    "/api/appointments?date=" + date, Appointment[].class);
+            Assertions.fail("Invalid date not detected: " + date);
+        } catch (HttpStatusCodeException e) {
+            assertSame(e.getStatusCode(),HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @Test
+    @Order(20)
+    public void testGetAllAppointmentHALWithRestTemplate() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Accept", "application/hal+json"); // get JSON/HAL
+        HttpEntity<String> request = new HttpEntity<>("", headers);
+        ResponseEntity<CollectionModel<EntityModel<Appointment>>> response = this.restTemplate.exchange(
+                "http://localhost:" + port + "/api/appointments",
+                HttpMethod.GET, request, new TypeReferences.CollectionModelType<EntityModel<Appointment>>() {
+                });
+        assertSame(response.getStatusCode(), HttpStatus.OK);
+        CollectionModel<EntityModel<Appointment>> apptEntities = response.getBody();
+        if (apptEntities != null) {
+            List<EntityModel<Appointment>> appts = new ArrayList<>(apptEntities.getContent());
+            assertEquals(appts.size(), 2);
+            for (EntityModel<Appointment> apptEntity : appts) {
+                assertTrue(apptEntity.hasLink("self"));
+                assertTrue(apptEntity.hasLink("appointments"));
+            }
+            createdAppt = appts.get(0).getContent(); // for the next tests
+        } else {
+            Assertions.fail("HAL appointments not found.");
+        }
+    }
+
 }
 
     /*
@@ -412,45 +449,10 @@ public class AppointmentApiTests {
 
 
 
-    @Test
-    @Order(19)
-    public void testGetAllAppointmentsWithInvalidDate() {
-        String date = "2021-20-27T17:34";
-        try {
-            restTemplate.getForEntity("http://localhost:" + port +
-                    "/api/appointments?date=" + date, Appointment[].class);
-            Assertions.fail("Invalid date not detected: " + date);
-        } catch (HttpStatusCodeException e) {
-            assertSame(e.getStatusCode(),HttpStatus.BAD_REQUEST);
-        }
-    }
+
 
     // Question 5 : HAL feature **********************************************
 
-    @Test
-    @Order(20)
-    public void testGetAllAppointmentHALWithRestTemplate() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Accept", "application/hal+json"); // get JSON/HAL
-        HttpEntity<String> request = new HttpEntity<>("", headers);
-        ResponseEntity<CollectionModel<EntityModel<Appointment>>> response = this.restTemplate.exchange(
-                "http://localhost:" + port + "/api/appointments",
-                HttpMethod.GET, request, new TypeReferences.CollectionModelType<EntityModel<Appointment>>() {
-                });
-        assertSame(response.getStatusCode(), HttpStatus.OK);
-        CollectionModel<EntityModel<Appointment>> apptEntities = response.getBody();
-        if (apptEntities != null) {
-            List<EntityModel<Appointment>> appts = new ArrayList<>(apptEntities.getContent());
-            assertEquals(appts.size(), 2);
-            for (EntityModel<Appointment> apptEntity : appts) {
-                assertTrue(apptEntity.hasLink("self"));
-                assertTrue(apptEntity.hasLink("appointments"));
-            }
-            createdAppt = appts.get(0).getContent(); // for the next tests
-        } else {
-            Assertions.fail("HAL appointments not found.");
-        }
-    }
 
     @Test
     @Order(21)
