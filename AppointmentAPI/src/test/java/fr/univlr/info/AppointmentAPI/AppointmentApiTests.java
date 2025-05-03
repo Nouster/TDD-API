@@ -420,6 +420,32 @@ public class AppointmentApiTests {
         }
     }
 
+    @Test
+    @Order(21)
+    public void testGetOneAppointmentHALWithRestTemplate() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Accept", "application/hal+json"); // get JSON/HAL
+        HttpEntity<String> request = new HttpEntity<>("", headers);
+        ResponseEntity<EntityModel<Appointment>> response = this.restTemplate.exchange(
+                "http://localhost:" + port + "/api/appointments/" + createdAppt.getId(),
+                HttpMethod.GET, request, new TypeReferences.EntityModelType<Appointment>() {
+                });
+        assertSame(response.getStatusCode(),HttpStatus.OK);
+        EntityModel<Appointment> apptEntity = response.getBody();
+        if (apptEntity != null) {
+            assertTrue(apptEntity.hasLink("self"));
+            assertTrue(apptEntity.hasLink("appointments"));
+            Appointment appt = apptEntity.getContent();
+            if (appt != null) {
+                assertEquals(appt.getPatient(), createdAppt.getPatient());
+            } else {
+                Assertions.fail("Appointment not found.");
+            }
+        } else {
+            Assertions.fail("HAL appointment not found.");
+        }
+    }
+
 }
 
     /*
@@ -454,31 +480,7 @@ public class AppointmentApiTests {
     // Question 5 : HAL feature **********************************************
 
 
-    @Test
-    @Order(21)
-    public void testGetOneAppointmentHALWithRestTemplate() {
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("Accept", "application/hal+json"); // get JSON/HAL
-        HttpEntity<String> request = new HttpEntity<>("", headers);
-        ResponseEntity<EntityModel<Appointment>> response = this.restTemplate.exchange(
-                "http://localhost:" + port + "/api/appointments/" + createdAppt.getId(),
-                HttpMethod.GET, request, new TypeReferences.EntityModelType<Appointment>() {
-                });
-        assertSame(response.getStatusCode(),HttpStatus.OK);
-        EntityModel<Appointment> apptEntity = response.getBody();
-        if (apptEntity != null) {
-            assertTrue(apptEntity.hasLink("self"));
-            assertTrue(apptEntity.hasLink("appointments"));
-            Appointment appt = apptEntity.getContent();
-            if (appt != null) {
-                assertEquals(appt.getPatient(), createdAppt.getPatient());
-            } else {
-                Assertions.fail("Appointment not found.");
-            }
-        } else {
-            Assertions.fail("HAL appointment not found.");
-        }
-    }
+
 
     @Test
     @Order(22)
