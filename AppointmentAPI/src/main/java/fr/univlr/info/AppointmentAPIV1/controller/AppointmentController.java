@@ -8,6 +8,9 @@ import org.springframework.beans.BeanUtils;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.hateoas.CollectionModel;
 import org.springframework.hateoas.EntityModel;
+import org.springframework.hateoas.MediaTypes;
+import org.springframework.hateoas.mediatype.problem.Problem;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
@@ -34,7 +37,7 @@ public class AppointmentController {
     private final AppointmentModelAssembler appointmentModelAssembler;
 
 
-    public AppointmentController(AppointmentRepository apptRepository, DoctorRepository doctorRepository,AppointmentModelAssembler appointmentModelAssembler) {
+    public AppointmentController(AppointmentRepository apptRepository, DoctorRepository doctorRepository, AppointmentModelAssembler appointmentModelAssembler, AppointmentRepository appointmentRepository) {
         this.doctorRepository = doctorRepository;
         this.apptRepository = apptRepository;
         this.appointmentModelAssembler = appointmentModelAssembler;
@@ -175,8 +178,36 @@ public class AppointmentController {
         return new ResponseEntity<>(existingAppt, HttpStatus.OK);
     }
 
+    @DeleteMapping("/appointments/{id}/cancel")
+    public ResponseEntity<?> cancelAppointment(@PathVariable Long id) {
+
+        // Je tente d'abord d'aller récupérer le rendez-vous avec son id
+        Appointment appointment = apptRepository.findById(id)
+                .orElseThrow(() -> new AppointmentNotFoundException(id));
+
+        // J'évacue d'abord les scénarios d'erreur et je vérifie si la date de début du rendez-vous est dans le passé
+        if (appointment.getStartDate().before(new Date())) {
+            // Si la date est dans le passé, je retourne une erreur 409 comme attendu dans le test
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .header(HttpHeaders.CONTENT_TYPE, MediaTypes.HTTP_PROBLEM_DETAILS_JSON_VALUE)
+                    .body(Problem.create()
+                            .withTitle("Method not allowed")
+                            .withDetail("You can't cancel an appointment that is in the past"));
+        }
+
+        // Si le rendez-vous peut être annulé, je le supprime
+        apptRepository.delete(appointment);
+        apptRepository.save(appointment);
+
+        // je retourne une réponse indiquant que l'annulation a réussi
+        return ResponseEntity.ok(appointmentModelAssembler.toModel(appointment));
+    }
+
+
+
     @DeleteMapping("appointments")
     public ResponseEntity<Appointment> deleteAllAppointments() {
+        // J'évacue le scénario où je n'aurai rien en bdd
         if(apptRepository.findAll().isEmpty()) {
             return new ResponseEntity<>(HttpStatus.NO_CONTENT);
         }

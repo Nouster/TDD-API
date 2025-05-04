@@ -583,55 +583,6 @@ public class AppointmentApiTests {
             Assertions.fail("Appointment entities for doctor Jones not found.");
         }
     }
-}
-
-    /*
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // Question 3 : updated API **********************************************
-    // Uncomment instantiation of doctors in LoadDatabase class.
-    // We start with no appointments (see test 11)
-
-
-
-
-
-
-    // Question 4 : templated request ****************************************
-
-
-
-
-
-    // Question 5 : HAL feature **********************************************
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // Question 6 : action feature **********************************************
 
     @Test
     @Order(28)
@@ -671,6 +622,11 @@ public class AppointmentApiTests {
             Assertions.fail("Problem about appointment entity for doctor Jones.");
         }
     }
+}
+
+    /*
+
+
 
     @Test
     @Order(29)
